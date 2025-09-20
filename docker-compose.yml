@@ -1,0 +1,92 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: campusswap-db
+    environment:
+      POSTGRES_USER: campusswap
+      POSTGRES_PASSWORD: CampusSwap2024!
+      POSTGRES_DB: campusswap
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - campusswap-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U campusswap"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: campusswap-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - campusswap-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: campusswap-api
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__DefaultConnection: "Host=postgres;Database=campusswap;Username=campusswap;Password=CampusSwap2024!"
+      Database__Provider: PostgreSQL
+      JwtSettings__Secret: "ThisIsAVerySecureSecretKeyForProductionUseThatIs256BitsLong!!!"
+      JwtSettings__Issuer: "CampusSwap"
+      JwtSettings__Audience: "CampusSwapUsers"
+      JwtSettings__ExpirationMinutes: "60"
+      Redis__ConnectionString: "redis:6379"
+      SendGrid__ApiKey: "YOUR_SENDGRID_API_KEY"
+      SendGrid__FromEmail: "noreply@campusswap.com"
+      SendGrid__FromName: "CampusSwap"
+      Azure__StorageConnectionString: "DefaultEndpointsProtocol=https;AccountName=YOUR_ACCOUNT;AccountKey=YOUR_KEY;EndpointSuffix=core.windows.net"
+      Azure__ContainerName: "campusswap-images"
+      AppSettings__BaseUrl: "http://localhost:3000"
+    ports:
+      - "5000:80"
+      - "5001:443"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - campusswap-network
+    volumes:
+      - ./uploads:/app/wwwroot/uploads
+      - ./logs:/app/logs
+
+  nginx:
+    image: nginx:alpine
+    container_name: campusswap-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - api
+    networks:
+      - campusswap-network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  campusswap-network:
+    driver: bridge
