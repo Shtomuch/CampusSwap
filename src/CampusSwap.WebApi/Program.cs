@@ -1,4 +1,5 @@
 using CampusSwap.Application;
+using CampusSwap.Application.Common.Interfaces;
 using CampusSwap.Infrastructure;
 using CampusSwap.WebApi.Hubs;
 using CampusSwap.WebApi.Middleware;

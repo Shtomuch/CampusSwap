@@ -55,9 +55,8 @@ public class ChatHub : Hub
 
         var command = new SendMessageCommand
         {
-            RecipientId = Guid.Parse(recipientId),
-            Content = message,
-            ListingId = string.IsNullOrEmpty(listingId) ? null : Guid.Parse(listingId)
+            ReceiverId = Guid.Parse(recipientId),
+            Content = message
         };
 
         try
@@ -120,9 +119,9 @@ public class ChatHub : Hub
     {
         try
         {
-            var messages = await _mediator.Send(new GetConversationMessagesQuery 
-            { 
-                ConversationId = Guid.Parse(conversationId) 
+            var messages = await _mediator.Send(new GetConversationMessagesQuery
+            {
+                OtherUserId = Guid.Parse(conversationId)
             });
             
             await Clients.Caller.SendAsync("MessagesLoaded", messages);

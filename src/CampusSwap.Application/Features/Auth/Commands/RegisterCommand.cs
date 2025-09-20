@@ -1,4 +1,5 @@
 using CampusSwap.Application.Common.Interfaces;
+using CampusSwap.Application.Features.Users.Queries;
 using CampusSwap.Domain.Entities;
 using FluentValidation;
 using MediatR;
