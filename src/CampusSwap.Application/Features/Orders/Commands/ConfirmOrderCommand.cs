@@ -1,5 +1,7 @@
 using CampusSwap.Application.Common.Interfaces;
+using CampusSwap.Domain.Enums;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 
 namespace CampusSwap.Application.Features.Orders.Commands;
 
@@ -26,7 +28,27 @@ public class ConfirmOrderCommandHandler : IRequestHandler<ConfirmOrderCommand, b
         if (!Guid.TryParse(_currentUserService.UserId, out var currentUserId))
             throw new InvalidOperationException("Invalid user ID");
 
-        // For now, return true as stub implementation
+        var order = await _context.Orders
+            .FirstOrDefaultAsync(o => o.Id == request.OrderId, cancellationToken);
+
+        if (order == null)
+            throw new InvalidOperationException("Order not found");
+
+        // Only seller can confirm the order
+        if (order.SellerId != currentUserId)
+            throw new UnauthorizedAccessException("Only the seller can confirm the order");
+
+        // Order must be in Pending status to be confirmed
+        if (order.Status != OrderStatus.Pending)
+            throw new InvalidOperationException("Order can only be confirmed when in Pending status");
+
+        // Update order status
+        order.Status = OrderStatus.Confirmed;
+        order.ConfirmedAt = DateTime.UtcNow;
+        order.UpdatedBy = _currentUserService.Email;
+
+        await _context.SaveChangesAsync(cancellationToken);
+
         return true;
     }
 }
