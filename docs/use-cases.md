@@ -60,10 +60,60 @@
 
 ---
 
-📌 **Де використати цей файл?**
+## 🧩 Діаграма послідовності (переговори та покупка)
 
-- Поклади його у `docs/use-cases.md`.
-- У `docs/architecture.md` зроби розділ **“📖 Додаткові матеріали”** з посиланням:
-  ```markdown
-  - [Use Cases](use-cases.md)
-  ```
+sequenceDiagram
+title Переговори про ціну та покупка (Buyer ↔ Seller через Chat + Marketplace)
+
+    actor Buyer as Покупець
+    participant WebApp as WebApp (React)
+    participant API as API (ASP.NET Core)
+    participant MP as Marketplace
+    participant Chat as Chat Service
+    actor Seller as Продавець
+    participant Pay as Payment/Order
+
+    %% Пошук і перегляд товару
+    Buyer->>WebApp: Відкрити маркетплейс, застосувати фільтри/пошук
+    WebApp->>API: GET /items?filters…
+    API->>MP: Query items
+    MP-->>API: Items list
+    API-->>WebApp: 200 OK + items
+    WebApp-->>Buyer: Показати список і картку товару
+
+    %% Ініціація чату
+    Buyer->>WebApp: Відкрити товар → "Написати продавцю"
+    WebApp->>API: POST /chats {itemId, sellerId}
+    API->>Chat: Create or get thread
+    Chat-->>API: ThreadId
+    API-->>WebApp: 201 Created + ThreadId
+    WebApp-->>Buyer: Відкрити чат
+
+    %% Переговори
+    Buyer->>Chat: "Ціна актуальна? Можлива знижка?"
+    Chat-->>Seller: Push/notification
+    Seller->>Chat: "Можу -10% або безкоштовну доставку"
+    Chat-->>Buyer: Повідомлення від продавця
+
+    %% Узгодження
+    alt Домовленість досягнута
+        Buyer->>WebApp: "Купити за узгодженою ціною"
+        WebApp->>API: POST /orders {itemId, priceAgreed, shipping}
+        API->>MP: Зарезервувати товар
+        MP-->>API: OK (reserved)
+        API->>Pay: Створити платіж/інвойс
+        Pay-->>API: Payment link / status=Pending
+        API-->>WebApp: 201 Created + paymentLink
+        WebApp-->>Buyer: Переадресація на оплату
+        Buyer->>Pay: Оплата
+        Pay-->>API: Webhook: payment=Succeeded
+        API->>MP: Позначити товар як проданий
+        MP-->>API: OK (sold)
+        API-->>Buyer: Підтвердження замовлення (email/notification)
+        API-->>Seller: Сповіщення про продаж (email/notification)
+    else Домовленість не досягнута
+        Buyer-->>Chat: "Дякую, розгляну інші варіанти"
+        Chat-->>Seller: Завершення діалогу без угоди
+    end
+
+    note over Buyer, Seller: Увесь час зберігається історія чату та статуси угоди
