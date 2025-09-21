@@ -174,7 +174,7 @@ export default function CreateListingPage() {
         </div>
 
         {/* Additional fields for textbooks */}
-        {category === '0' && (
+        {Number(category) === ListingCategory.Textbooks && (
           <>
             <div className="grid grid-cols-2 gap-4">
               <div>
