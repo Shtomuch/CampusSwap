@@ -16,17 +16,21 @@ public static class DependencyInjection
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
         // Database
-        var connectionString = configuration.GetConnectionString("DefaultConnection");
-        
-        if (configuration["Database:Provider"] == "PostgreSQL")
+        var databaseProvider = configuration["Database:Provider"] ?? "PostgreSQL";
+        var connectionString = configuration.GetConnectionString(databaseProvider)
+            ?? configuration.GetConnectionString("DefaultConnection");
+
+        switch (databaseProvider.ToLower())
         {
-            services.AddDbContext<ApplicationDbContext>(options =>
-                options.UseNpgsql(connectionString));
-        }
-        else
-        {
-            services.AddDbContext<ApplicationDbContext>(options =>
-                options.UseSqlServer(connectionString));
+            case "sqlite":
+                services.AddDbContext<ApplicationDbContext>(options =>
+                    options.UseSqlite(connectionString));
+                break;
+            case "postgresql":
+            default:
+                services.AddDbContext<ApplicationDbContext>(options =>
+                    options.UseNpgsql(connectionString));
+                break;
         }
 
         services.AddScoped<IApplicationDbContext>(provider => provider.GetRequiredService<ApplicationDbContext>());

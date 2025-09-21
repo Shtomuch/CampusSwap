@@ -200,40 +200,61 @@ npm install
 npm start
 ```
 
-### 🔄 Перехід на SQLite (простіше для розробки)
+### 🔄 Зручне перемикання між PostgreSQL та SQLite
 
-1. **Встановити SQLite пакет:**
-```bash
-cd src/CampusSwap.Infrastructure
-dotnet add package Microsoft.EntityFrameworkCore.Sqlite
-dotnet remove package Npgsql.EntityFrameworkCore.PostgreSQL
-```
+Проект налаштований для легкого перемикання між базами даних!
 
-2. **Оновити appsettings.json:**
+#### Використання PostgreSQL (за замовчуванням):
 ```json
-"ConnectionStrings": {
-  "DefaultConnection": "Data Source=campusswap.db"
+// appsettings.json
+"Database": {
+  "Provider": "PostgreSQL"
 }
 ```
 
-3. **Змінити Program.cs в WebApi:**
-```csharp
-// Замінити
-services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseNpgsql(connectionString));
-
-// На
-services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlite(connectionString));
+#### Переключення на SQLite:
+```json
+// appsettings.json
+"Database": {
+  "Provider": "SQLite"
+}
 ```
 
-4. **Видалити старі міграції та створити нові:**
+#### Перший запуск з SQLite:
 ```bash
+# 1. Змінити Provider в appsettings.json на "SQLite"
+
+# 2. Видалити старі міграції PostgreSQL
+rm -rf src/CampusSwap.Infrastructure/Data/Migrations/*
+
+# 3. Створити нові міграції для SQLite
 cd src/CampusSwap.WebApi
-rm -rf ../CampusSwap.Infrastructure/Data/Migrations/*
 dotnet ef migrations add InitialCreate
 dotnet ef database update
+
+# 4. Запустити проект
+dotnet run
 ```
+
+#### Повернення на PostgreSQL:
+```bash
+# 1. Змінити Provider в appsettings.json на "PostgreSQL"
+
+# 2. Видалити міграції SQLite
+rm -rf src/CampusSwap.Infrastructure/Data/Migrations/*
+
+# 3. Створити міграції для PostgreSQL
+cd src/CampusSwap.WebApi
+dotnet ef migrations add InitialCreate
+dotnet ef database update
+
+# 4. Запустити проект
+dotnet run
+```
+
+**Примітка:** Обидві connection strings вже налаштовані в `appsettings.json`:
+- PostgreSQL: `"Host=localhost;Database=campusswap_db;Username=denys;Password="`
+- SQLite: `"Data Source=campusswap.db"`
 
 ## 🔍 Де що шукати
 
