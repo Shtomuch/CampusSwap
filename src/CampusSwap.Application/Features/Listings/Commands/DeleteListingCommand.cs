@@ -57,7 +57,7 @@ public class DeleteListingCommandHandler : IRequestHandler<DeleteListingCommand,
 
         // Soft delete the listing
         listing.IsDeleted = true;
-        listing.Status = ListingStatus.Inactive;
+        listing.Status = ListingStatus.Cancelled;
         listing.UpdatedBy = _currentUserService.UserId;
 
         await _context.SaveChangesAsync(cancellationToken);

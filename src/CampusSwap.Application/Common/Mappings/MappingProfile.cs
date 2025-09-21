@@ -3,6 +3,7 @@ using CampusSwap.Domain.Entities;
 using CampusSwap.Application.Features.Listings.Queries;
 using CampusSwap.Application.Features.Users.Queries;
 using CampusSwap.Application.Features.Orders.Queries;
+using CampusSwap.Application.Features.Reviews.Queries;
 
 namespace CampusSwap.Application.Common.Mappings;
 

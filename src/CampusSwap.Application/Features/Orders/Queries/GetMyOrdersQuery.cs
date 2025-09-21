@@ -114,7 +114,7 @@ public class GetMyOrdersQueryHandler : IRequestHandler<GetMyOrdersQuery, List<Or
                 // Listing info
                 ListingId = o.ListingId,
                 ListingTitle = o.Listing.Title,
-                ListingImageUrl = o.Listing.Images.Any() ? o.Listing.Images.First().Url : "",
+                ListingImageUrl = o.Listing.Images.Any() ? o.Listing.Images.First().ImageUrl : "",
 
                 // User info
                 BuyerId = o.BuyerId,
