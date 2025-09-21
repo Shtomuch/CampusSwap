@@ -149,7 +149,7 @@ export default function OrdersPage() {
           </button>
         )}
 
-        {order.status === OrderStatus.Completed && !order.review && (
+        {order.status === OrderStatus.Completed && (
           <button className="flex-1 px-4 py-2 border border-primary-600 text-primary-600 rounded-lg hover:bg-primary-50">
             Залишити відгук
           </button>
