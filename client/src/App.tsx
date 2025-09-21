@@ -1,18 +1,23 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { AuthProvider } from './context/AuthContext';
-import Layout from './components/Layout';
-import HomePage from './pages/HomePage';
-import LoginPage from './pages/LoginPage';
-import RegisterPage from './pages/RegisterPage';
-import ListingsPage from './pages/ListingsPage';
-import ListingDetailsPage from './pages/ListingDetailsPage';
-import CreateListingPage from './pages/CreateListingPage';
-import ProfilePage from './pages/ProfilePage';
-import ChatPage from './pages/ChatPage';
-import OrdersPage from './pages/OrdersPage';
-import ProtectedRoute from './components/ProtectedRoute';
+import React from "react";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { AuthProvider } from "./context/AuthContext";
+import Layout from "./components/Layout";
+import HomePage from "./pages/HomePage";
+import LoginPage from "./pages/LoginPage";
+import RegisterPage from "./pages/RegisterPage";
+import ListingsPage from "./pages/ListingsPage";
+import ListingDetailsPage from "./pages/ListingDetailsPage";
+import CreateListingPage from "./pages/CreateListingPage";
+import ProfilePage from "./pages/ProfilePage";
+import ChatPage from "./pages/ChatPage";
+import OrdersPage from "./pages/OrdersPage";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient();
 
