@@ -32,12 +32,22 @@ export default function ListingDetailsPage() {
     navigate(`/chat?userId=${listing?.userId}`);
   };
 
-  const handleOrder = () => {
+  const handleOrder = async () => {
     if (!isAuthenticated) {
       navigate('/login');
       return;
     }
-    // Create order logic
+    try {
+      await api.post('/orders', {
+        listingId: listing?.id,
+        meetingLocation: listing?.location || 'Узгоджується',
+        meetingTime: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+        notes: `Запит з оголошення ${listing?.title}`,
+      });
+      navigate('/orders');
+    } catch (error) {
+      console.error('Error creating order:', error);
+    }
   };
 
   if (isLoading) {

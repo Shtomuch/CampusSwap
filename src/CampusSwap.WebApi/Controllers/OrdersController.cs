@@ -19,9 +19,9 @@ public class OrdersController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetMyOrders()
+    public async Task<IActionResult> GetMyOrders([FromQuery] GetMyOrdersQuery query)
     {
-        var result = await _mediator.Send(new GetMyOrdersQuery());
+        var result = await _mediator.Send(query);
         return Ok(result);
     }
 

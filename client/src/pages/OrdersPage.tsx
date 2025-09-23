@@ -1,5 +1,5 @@
 import React from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Tab } from '@headlessui/react';
 import { CalendarIcon, MapPinIcon, ClockIcon, CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/outline';
 import api from '../services/api';
@@ -30,10 +30,11 @@ const statusLabels: Record<OrderStatus, string> = {
 };
 
 export default function OrdersPage() {
+  const queryClient = useQueryClient();
   const { data: buyerOrders = [], isLoading: buyerLoading } = useQuery<Order[]>({
     queryKey: ['orders', 'buyer'],
     queryFn: async () => {
-      const response = await api.get('/orders?type=buyer');
+      const response = await api.get('/orders', { params: { isBuyer: true } });
       return response.data;
     },
   });
@@ -41,7 +42,7 @@ export default function OrdersPage() {
   const { data: sellerOrders = [], isLoading: sellerLoading } = useQuery<Order[]>({
     queryKey: ['orders', 'seller'],
     queryFn: async () => {
-      const response = await api.get('/orders?type=seller');
+      const response = await api.get('/orders', { params: { isBuyer: false } });
       return response.data;
     },
   });
@@ -49,7 +50,10 @@ export default function OrdersPage() {
   const handleConfirmOrder = async (orderId: string) => {
     try {
       await api.put(`/orders/${orderId}/confirm`);
-      // Refetch orders
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['orders', 'buyer'] }),
+        queryClient.invalidateQueries({ queryKey: ['orders', 'seller'] }),
+      ]);
     } catch (error) {
       console.error('Error confirming order:', error);
     }
@@ -58,7 +62,10 @@ export default function OrdersPage() {
   const handleCompleteOrder = async (orderId: string) => {
     try {
       await api.put(`/orders/${orderId}/complete`);
-      // Refetch orders
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['orders', 'buyer'] }),
+        queryClient.invalidateQueries({ queryKey: ['orders', 'seller'] }),
+      ]);
     } catch (error) {
       console.error('Error completing order:', error);
     }
@@ -67,7 +74,10 @@ export default function OrdersPage() {
   const handleCancelOrder = async (orderId: string, reason: string) => {
     try {
       await api.put(`/orders/${orderId}/cancel`, { reason });
-      // Refetch orders
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['orders', 'buyer'] }),
+        queryClient.invalidateQueries({ queryKey: ['orders', 'seller'] }),
+      ]);
     } catch (error) {
       console.error('Error cancelling order:', error);
     }

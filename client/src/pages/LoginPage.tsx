@@ -116,9 +116,9 @@ export default function LoginPage() {
             </div>
 
             <div className="text-sm">
-              <a href="#" className="font-medium text-primary-600 hover:text-primary-500">
+              <button type="button" className="font-medium text-primary-600 hover:text-primary-500" onClick={() => navigate('/reset-password')}>
                 Забули пароль?
-              </a>
+              </button>
             </div>
           </div>
 

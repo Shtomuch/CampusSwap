@@ -1,5 +1,5 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { MagnifyingGlassIcon, BookOpenIcon, ComputerDesktopIcon, HomeIcon, ShoppingBagIcon } from '@heroicons/react/24/outline';
 import api from '../services/api';
@@ -14,6 +14,8 @@ const categories = [
 ];
 
 export default function HomePage() {
+  const navigate = useNavigate();
+  const [searchTerm, setSearchTerm] = useState('');
   const { data: listings, isLoading } = useQuery<Listing[]>({
     queryKey: ['listings', 'recent'],
     queryFn: async () => {
@@ -43,13 +45,18 @@ export default function HomePage() {
             <div className="relative">
               <input
                 type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
                 className="block w-full pl-12 pr-4 py-4 text-lg placeholder-gray-500 bg-white border border-transparent rounded-lg focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent"
                 placeholder="Пошук підручників, електроніки, меблів..."
               />
               <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                 <MagnifyingGlassIcon className="h-6 w-6 text-gray-400" />
               </div>
-              <button className="absolute inset-y-0 right-0 px-6 text-white bg-primary-800 hover:bg-primary-900 rounded-r-lg">
+              <button
+                onClick={() => navigate(`/listings?search=${encodeURIComponent(searchTerm)}`)}
+                className="absolute inset-y-0 right-0 px-6 text-white bg-primary-800 hover:bg-primary-900 rounded-r-lg"
+              >
                 Пошук
               </button>
             </div>
