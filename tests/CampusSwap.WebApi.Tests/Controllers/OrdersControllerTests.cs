@@ -18,16 +18,16 @@ public class OrdersControllerTests
     }
 
     [Fact]
-    public async Task GetMyOrders_Returns_Ok_And_Sends_Query()
-    {
-        var mediator = new Mock<IMediator>();
-        var sut = new OrdersController(mediator.Object);
+public async Task GetMyOrders_Returns_Ok_And_Sends_Query()
+{
+    var mediator = new Mock<IMediator>();
+    var sut = new OrdersController(mediator.Object);
 
-        var result = await sut.GetMyOrders();
+    var result = await sut.GetMyOrders(new GetMyOrdersQuery());
 
-        Assert.IsType<OkObjectResult>(result);
-        mediator.Verify(m => m.Send(It.IsAny<GetMyOrdersQuery>(), It.IsAny<CancellationToken>()), Times.Once);
-    }
+    Assert.IsType<OkObjectResult>(result);
+    mediator.Verify(m => m.Send(It.IsAny<GetMyOrdersQuery>(), It.IsAny<CancellationToken>()), Times.Once);
+}
 
     [Fact]
     public async Task GetOrder_Returns_Ok_And_Sends_Query_With_Id()
