@@ -1,5 +1,5 @@
 using CampusSwap.Application.Features.Listings.Commands;
-using CampusSwap.Application.Interfaces;
+using CampusSwap.Application.Common.Interfaces;
 using CampusSwap.Domain.Entities;
 using CampusSwap.Domain.Enums;
 using FluentAssertions;

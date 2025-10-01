@@ -126,7 +126,9 @@ public class FileStorageService : IFileStorageService
             await fileStream.CopyToAsync(fileStreamOutput);
         }
         
-        return $"/uploads/{uniqueFileName}";
+        // Return full URL for local development
+        var baseUrl = _configuration["ApiBaseUrl"] ?? "http://localhost:5000";
+        return $"{baseUrl}/uploads/{uniqueFileName}";
     }
 
     private async Task<Stream> ReadFileLocallyAsync(string fileUrl)

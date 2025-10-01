@@ -1,11 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Tab } from '@headlessui/react';
-import { CalendarIcon, MapPinIcon, ClockIcon, CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/outline';
+import { CalendarIcon, MapPinIcon, ClockIcon, CheckCircleIcon, XCircleIcon, TrashIcon } from '@heroicons/react/24/outline';
 import api from '../services/api';
 import { Order, OrderStatus } from '../types';
 import { format } from 'date-fns';
 import { uk } from 'date-fns/locale';
+import { ConfirmModal, PromptModal } from '../components/Modal';
+import { useToast, ToastContainer } from '../components/Toast';
 
 function classNames(...classes: string[]) {
   return classes.filter(Boolean).join(' ');
@@ -31,6 +33,18 @@ const statusLabels: Record<OrderStatus, string> = {
 
 export default function OrdersPage() {
   const queryClient = useQueryClient();
+  const { toasts, removeToast, showSuccess, showError } = useToast();
+  
+  // Modal states
+  const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; orderId: string | null }>({
+    isOpen: false,
+    orderId: null
+  });
+  
+  const [cancelModal, setCancelModal] = useState<{ isOpen: boolean; orderId: string | null }>({
+    isOpen: false,
+    orderId: null
+  });
   const { data: buyerOrders = [], isLoading: buyerLoading } = useQuery<Order[]>({
     queryKey: ['orders', 'buyer'],
     queryFn: async () => {
@@ -54,8 +68,11 @@ export default function OrdersPage() {
         queryClient.invalidateQueries({ queryKey: ['orders', 'buyer'] }),
         queryClient.invalidateQueries({ queryKey: ['orders', 'seller'] }),
       ]);
-    } catch (error) {
+      showSuccess('Замовлення підтверджено', 'Замовлення успішно підтверджено');
+    } catch (error: any) {
       console.error('Error confirming order:', error);
+      const errorMessage = error?.response?.data?.message || error?.message || 'Не вдалося підтвердити замовлення';
+      showError('Помилка підтвердження', errorMessage);
     }
   };
 
@@ -66,8 +83,11 @@ export default function OrdersPage() {
         queryClient.invalidateQueries({ queryKey: ['orders', 'buyer'] }),
         queryClient.invalidateQueries({ queryKey: ['orders', 'seller'] }),
       ]);
-    } catch (error) {
+      showSuccess('Угода завершена', 'Замовлення успішно завершено');
+    } catch (error: any) {
       console.error('Error completing order:', error);
+      const errorMessage = error?.response?.data?.message || error?.message || 'Не вдалося завершити замовлення';
+      showError('Помилка завершення', errorMessage);
     }
   };
 
@@ -78,9 +98,43 @@ export default function OrdersPage() {
         queryClient.invalidateQueries({ queryKey: ['orders', 'buyer'] }),
         queryClient.invalidateQueries({ queryKey: ['orders', 'seller'] }),
       ]);
-    } catch (error) {
+      showSuccess('Замовлення скасовано', 'Замовлення успішно скасовано');
+    } catch (error: any) {
       console.error('Error cancelling order:', error);
+      const errorMessage = error?.response?.data?.message || error?.message || 'Не вдалося скасувати замовлення';
+      showError('Помилка скасування', errorMessage);
     }
+  };
+
+  const handleDeleteOrder = async (orderId: string) => {
+    try {
+      await api.delete(`/orders/${orderId}`);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['orders', 'buyer'] }),
+        queryClient.invalidateQueries({ queryKey: ['orders', 'seller'] }),
+      ]);
+      showSuccess('Замовлення видалено', 'Замовлення успішно видалено з системи');
+    } catch (error: any) {
+      console.error('Error deleting order:', error);
+      const errorMessage = error?.response?.data?.message || error?.message || 'Не вдалося видалити замовлення';
+      showError('Помилка видалення', errorMessage);
+    }
+  };
+
+  const openDeleteModal = (orderId: string) => {
+    setDeleteModal({ isOpen: true, orderId });
+  };
+
+  const closeDeleteModal = () => {
+    setDeleteModal({ isOpen: false, orderId: null });
+  };
+
+  const openCancelModal = (orderId: string) => {
+    setCancelModal({ isOpen: true, orderId });
+  };
+
+  const closeCancelModal = () => {
+    setCancelModal({ isOpen: false, orderId: null });
   };
 
   const OrderCard = ({ order, isSeller }: { order: Order; isSeller: boolean }) => (
@@ -120,7 +174,7 @@ export default function OrdersPage() {
           </p>
         </div>
         <p className="text-xl font-bold text-primary-600">
-          {order.totalAmount.toLocaleString('uk-UA')} ₴
+          {order.totalAmount ? order.totalAmount.toLocaleString('uk-UA') : '0'} {order.currency || '₴'}
         </p>
       </div>
 
@@ -150,6 +204,17 @@ export default function OrdersPage() {
           </>
         )}
 
+        {/* Кнопка скасування для покупця */}
+        {!isSeller && order.status === OrderStatus.Pending && (
+          <button
+            onClick={() => openCancelModal(order.id)}
+            className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 flex items-center justify-center"
+          >
+            <XCircleIcon className="h-5 w-5 mr-2" />
+            Скасувати замовлення
+          </button>
+        )}
+
         {order.status === OrderStatus.Confirmed && (
           <button
             onClick={() => handleCompleteOrder(order.id)}
@@ -162,6 +227,17 @@ export default function OrdersPage() {
         {order.status === OrderStatus.Completed && (
           <button className="flex-1 px-4 py-2 border border-primary-600 text-primary-600 rounded-lg hover:bg-primary-50">
             Залишити відгук
+          </button>
+        )}
+
+        {/* Кнопка видалення - доступна тільки для Pending або Cancelled замовлень */}
+        {(order.status === OrderStatus.Pending || order.status === OrderStatus.Cancelled) && (
+          <button
+            onClick={() => openDeleteModal(order.id)}
+            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center justify-center"
+            title="Видалити замовлення"
+          >
+            <TrashIcon className="h-5 w-5" />
           </button>
         )}
       </div>
@@ -236,6 +312,34 @@ export default function OrdersPage() {
           </Tab.Panel>
         </Tab.Panels>
       </Tab.Group>
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={deleteModal.isOpen}
+        onClose={closeDeleteModal}
+        onConfirm={() => deleteModal.orderId && handleDeleteOrder(deleteModal.orderId)}
+        title="Видалити замовлення"
+        message="Ви впевнені, що хочете видалити це замовлення? Ця дія незворотна і замовлення буде повністю видалено з системи."
+        confirmText="Видалити"
+        cancelText="Скасувати"
+        variant="danger"
+      />
+
+      {/* Cancel Order Modal */}
+      <PromptModal
+        isOpen={cancelModal.isOpen}
+        onClose={closeCancelModal}
+        onSubmit={(reason) => cancelModal.orderId && handleCancelOrder(cancelModal.orderId, reason)}
+        title="Скасувати замовлення"
+        message="Введіть причину скасування замовлення:"
+        placeholder="Наприклад: Змінив думку, товар більше не потрібен..."
+        submitText="Скасувати замовлення"
+        cancelText="Залишити замовлення"
+        required={true}
+      />
+
+      {/* Toast notifications */}
+      <ToastContainer toasts={toasts} onClose={removeToast} />
     </div>
   );
 }

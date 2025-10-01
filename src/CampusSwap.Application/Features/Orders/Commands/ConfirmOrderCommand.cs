@@ -1,5 +1,6 @@
 using CampusSwap.Application.Common.Interfaces;
 using CampusSwap.Domain.Enums;
+using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -10,17 +11,29 @@ public class ConfirmOrderCommand : IRequest<bool>
     public Guid OrderId { get; set; }
 }
 
+public class ConfirmOrderCommandValidator : AbstractValidator<ConfirmOrderCommand>
+{
+    public ConfirmOrderCommandValidator()
+    {
+        RuleFor(x => x.OrderId)
+            .NotEmpty().WithMessage("Order ID is required");
+    }
+}
+
 public class ConfirmOrderCommandHandler : IRequestHandler<ConfirmOrderCommand, bool>
 {
     private readonly IApplicationDbContext _context;
     private readonly ICurrentUserService _currentUserService;
+    private readonly INotificationService _notificationService;
 
     public ConfirmOrderCommandHandler(
         IApplicationDbContext context,
-        ICurrentUserService currentUserService)
+        ICurrentUserService currentUserService,
+        INotificationService notificationService)
     {
         _context = context;
         _currentUserService = currentUserService;
+        _notificationService = notificationService;
     }
 
     public async Task<bool> Handle(ConfirmOrderCommand request, CancellationToken cancellationToken)
@@ -48,6 +61,18 @@ public class ConfirmOrderCommandHandler : IRequestHandler<ConfirmOrderCommand, b
         order.UpdatedBy = _currentUserService.Email;
 
         await _context.SaveChangesAsync(cancellationToken);
+
+        // Create notification for the buyer
+        await _notificationService.CreateNotificationAsync(
+            order.BuyerId,
+            "order",
+            "Замовлення підтверджено",
+            $"Ваше замовлення \"{order.Listing.Title}\" підтверджено продавцем",
+            $"/orders/{order.Id}",
+            null,
+            order.Id,
+            null,
+            order.ListingId);
 
         return true;
     }

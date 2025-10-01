@@ -115,3 +115,22 @@ export interface AuthResponse {
   refreshToken: string;
   user: User;
 }
+
+export interface Notification {
+  id: string;
+  type: 'order' | 'message' | 'system';
+  title: string;
+  message: string;
+  isRead: boolean;
+  actionUrl?: string;
+  data?: string;
+  createdAt: Date;
+  orderId?: string;
+  conversationId?: string;
+  listingId?: string;
+}
+
+export interface UnreadCounts {
+  unreadNotificationCount: number;
+  unreadChatCount: number;
+}

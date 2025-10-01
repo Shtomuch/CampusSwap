@@ -1,6 +1,7 @@
 using Bogus;
 using CampusSwap.Domain.Entities;
 using CampusSwap.Domain.Enums;
+using CampusSwap.Domain.ValueObjects;
 using FluentAssertions;
 
 namespace CampusSwap.Domain.Tests.Entities;
@@ -27,7 +28,7 @@ public class ListingTests
             Id = id,
             Title = title,
             Description = description,
-            Price = price,
+            Price = new Money(price, "UAH"),
             Category = category,
             Condition = condition,
             Location = location
@@ -37,7 +38,8 @@ public class ListingTests
         listing.Id.Should().Be(id);
         listing.Title.Should().Be(title);
         listing.Description.Should().Be(description);
-        listing.Price.Should().Be(price);
+        listing.Price.Amount.Should().Be(price);
+        listing.Price.Currency.Should().Be("UAH");
         listing.Category.Should().Be(category);
         listing.Condition.Should().Be(condition);
         listing.Location.Should().Be(location);
@@ -52,8 +54,10 @@ public class ListingTests
         var listing = new Listing();
 
         // Assert
-        listing.ImageUrls.Should().NotBeNull();
+        listing.Images.Should().NotBeNull();
         listing.SavedByUsers.Should().NotBeNull();
+        listing.Orders.Should().NotBeNull();
+        listing.RelatedMessages.Should().NotBeNull();
     }
 
     [Fact]
@@ -139,16 +143,16 @@ public class ListingTests
     }
 
     [Fact]
-    public void Should_Set_ViewCount_Property()
+    public void Should_Set_ViewsCount_Property()
     {
         // Arrange
         var listing = new Listing();
-        var viewCount = _faker.Random.Int(0, 1000);
+        var viewsCount = _faker.Random.Int(0, 1000);
 
         // Act
-        listing.ViewCount = viewCount;
+        listing.ViewsCount = viewsCount;
 
         // Assert
-        listing.ViewCount.Should().Be(viewCount);
+        listing.ViewsCount.Should().Be(viewsCount);
     }
 }

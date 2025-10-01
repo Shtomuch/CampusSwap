@@ -41,15 +41,23 @@ public class ErrorHandlingMiddleware
                 break;
             case UnauthorizedAccessException:
                 response.StatusCode = (int)HttpStatusCode.Unauthorized;
-                response.Message = "Unauthorized access";
+                response.Message = "Несанкціонований доступ";
                 break;
             case KeyNotFoundException:
                 response.StatusCode = (int)HttpStatusCode.NotFound;
-                response.Message = "Resource not found";
+                response.Message = "Ресурс не знайдено";
+                break;
+            case System.Text.Json.JsonException jsonEx:
+                response.StatusCode = (int)HttpStatusCode.BadRequest;
+                response.Message = $"Помилка формату JSON: {jsonEx.Message}";
+                break;
+            case ArgumentException argEx:
+                response.StatusCode = (int)HttpStatusCode.BadRequest;
+                response.Message = $"Невірний аргумент: {argEx.Message}";
                 break;
             default:
                 response.StatusCode = (int)HttpStatusCode.InternalServerError;
-                response.Message = "An error occurred while processing your request";
+                response.Message = "Сталася помилка під час обробки запиту";
                 break;
         }
 

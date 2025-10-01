@@ -1,81 +1,186 @@
-import { render, screen } from '@testing-library/react';
+import React from 'react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import ListingCard from '../ListingCard';
-import { Listing } from '../../types';
+import { Listing, ListingCategory, ListingStatus } from '../../types';
+import { SavedItemsProvider } from '../../context/SavedItemsContext';
+
+// Mock the useSavedItems hook
+const mockUseSavedItems = {
+  isSaved: jest.fn(),
+  toggleSaved: jest.fn(),
+  savedItems: [],
+  loadSavedItems: jest.fn(),
+};
+
+jest.mock('../../context/SavedItemsContext', () => ({
+  useSavedItems: () => mockUseSavedItems,
+  SavedItemsProvider: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+}));
+
+// Mock date-fns
+jest.mock('date-fns', () => ({
+  format: jest.fn((date, format, options) => '25 вересня'),
+}));
+
+const createTestQueryClient = () => new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: false,
+    },
+  },
+});
+
+const renderWithProviders = (component: React.ReactElement) => {
+  const queryClient = createTestQueryClient();
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <SavedItemsProvider>
+        <BrowserRouter>
+          {component}
+        </BrowserRouter>
+      </SavedItemsProvider>
+    </QueryClientProvider>
+  );
+};
 
 const mockListing: Listing = {
   id: '1',
-  title: 'Test Book',
+  title: 'Test Listing',
   description: 'Test description',
   price: 100,
-  condition: 'Good',
-  category: 0,
-  imageUrls: ['test.jpg'],
-  sellerId: 'seller1',
-  sellerName: 'Test Seller',
-  location: 'Campus',
+  currency: 'UAH',
+  category: ListingCategory.Textbooks,
+  status: ListingStatus.Active,
+  condition: 'New',
+  isbn: '1234567890',
+  courseCode: 'CS101',
+  author: 'Test Author',
+  publicationYear: 2023,
+  location: 'Kyiv',
   isNegotiable: true,
-  viewCount: 10,
-  createdAt: '2024-01-01',
-  status: 0
+  viewsCount: 10,
+  userId: 'user1',
+  sellerName: 'Test Seller',
+  imageUrls: ['https://example.com/image1.jpg', 'https://example.com/image2.jpg'],
+  createdAt: new Date('2023-09-25'),
+  updatedAt: new Date('2023-09-25'),
 };
 
-const renderWithRouter = (component: React.ReactElement) => {
-  return render(<BrowserRouter>{component}</BrowserRouter>);
-};
-
-describe('ListingCard', () => {
-  test('renders listing title', () => {
-    renderWithRouter(<ListingCard listing={mockListing} />);
-    expect(screen.getByText('Test Book')).toBeInTheDocument();
+describe('ListingCard Component', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockUseSavedItems.isSaved.mockReturnValue(false);
+    mockUseSavedItems.toggleSaved.mockResolvedValue(undefined);
   });
 
-  test('renders listing price', () => {
-    renderWithRouter(<ListingCard listing={mockListing} />);
-    expect(screen.getByText('₴100')).toBeInTheDocument();
+  describe('Basic Rendering', () => {
+    test('renders listing card with all required information', () => {
+      renderWithProviders(<ListingCard listing={mockListing} />);
+      
+      expect(screen.getByText('Test Listing')).toBeInTheDocument();
+      expect(screen.getByText('100 ₴')).toBeInTheDocument();
+      expect(screen.getByText('Торг можливий')).toBeInTheDocument();
+      expect(screen.getByText('Kyiv')).toBeInTheDocument();
+      expect(screen.getByText('25 вересня')).toBeInTheDocument();
+    });
+
+    test('renders category label correctly', () => {
+      renderWithProviders(<ListingCard listing={mockListing} />);
+      
+      expect(screen.getByText('Підручники')).toBeInTheDocument();
+    });
+
+    test('renders image with correct src and alt', () => {
+      renderWithProviders(<ListingCard listing={mockListing} />);
+      
+      const image = screen.getByAltText('Test Listing');
+      expect(image).toHaveAttribute('src', 'https://example.com/image1.jpg');
+    });
+
+    test('renders fallback image when no images provided', () => {
+      const listingWithoutImages = { ...mockListing, imageUrls: [] };
+      renderWithProviders(<ListingCard listing={listingWithoutImages} />);
+      
+      const image = screen.getByAltText('Test Listing');
+      expect(image).toHaveAttribute('src', 'https://via.placeholder.com/400x300?text=No+Image');
+    });
   });
 
-  test('renders listing condition', () => {
-    renderWithRouter(<ListingCard listing={mockListing} />);
-    expect(screen.getByText('Good')).toBeInTheDocument();
+  describe('Price Display', () => {
+    test('formats price correctly with Ukrainian locale', () => {
+      renderWithProviders(<ListingCard listing={mockListing} />);
+      
+      expect(screen.getByText('100 ₴')).toBeInTheDocument();
+    });
+
+    test('displays 0 when price is not provided', () => {
+      const listingWithoutPrice = { ...mockListing, price: undefined };
+      renderWithProviders(<ListingCard listing={listingWithoutPrice} />);
+      
+      expect(screen.getByText('0 ₴')).toBeInTheDocument();
+    });
+
+    test('formats large numbers correctly', () => {
+      const listingWithLargePrice = { ...mockListing, price: 1234567 };
+      renderWithProviders(<ListingCard listing={listingWithLargePrice} />);
+      
+      expect(screen.getByText('1,234,567 ₴')).toBeInTheDocument();
+    });
   });
 
-  test('renders negotiable badge when isNegotiable is true', () => {
-    renderWithRouter(<ListingCard listing={mockListing} />);
-    expect(screen.getByText('Торг')).toBeInTheDocument();
+  describe('Save/Unsave Functionality', () => {
+    test('renders unsaved heart icon when item is not saved', () => {
+      mockUseSavedItems.isSaved.mockReturnValue(false);
+      renderWithProviders(<ListingCard listing={mockListing} />);
+      
+      const heartButton = screen.getByTitle('Додати до збережених');
+      expect(heartButton).toBeInTheDocument();
+    });
+
+    test('renders saved heart icon when item is saved', () => {
+      mockUseSavedItems.isSaved.mockReturnValue(true);
+      renderWithProviders(<ListingCard listing={mockListing} />);
+      
+      const heartButton = screen.getByTitle('Видалити з збережених');
+      expect(heartButton).toBeInTheDocument();
+    });
+
+    test('calls toggleSaved when heart button is clicked', async () => {
+      renderWithProviders(<ListingCard listing={mockListing} />);
+      
+      const heartButton = screen.getByTitle('Додати до збережених');
+      fireEvent.click(heartButton);
+      
+      await waitFor(() => {
+        expect(mockUseSavedItems.toggleSaved).toHaveBeenCalledWith('1');
+      });
+    });
   });
 
-  test('does not render negotiable badge when isNegotiable is false', () => {
-    const nonNegotiableListing = { ...mockListing, isNegotiable: false };
-    renderWithRouter(<ListingCard listing={nonNegotiableListing} />);
-    expect(screen.queryByText('Торг')).not.toBeInTheDocument();
+  describe('Navigation', () => {
+    test('renders as a link to listing details page', () => {
+      renderWithProviders(<ListingCard listing={mockListing} />);
+      
+      const link = screen.getByRole('link');
+      expect(link).toHaveAttribute('href', '/listings/1');
+    });
   });
 
-  test('renders listing image', () => {
-    renderWithRouter(<ListingCard listing={mockListing} />);
-    const image = screen.getByRole('img') as HTMLImageElement;
-    expect(image.src).toContain('test.jpg');
-  });
+  describe('Accessibility', () => {
+    test('has proper alt text for image', () => {
+      renderWithProviders(<ListingCard listing={mockListing} />);
+      
+      const image = screen.getByAltText('Test Listing');
+      expect(image).toBeInTheDocument();
+    });
 
-  test('renders placeholder image when no images provided', () => {
-    const listingWithoutImage = { ...mockListing, imageUrls: [] };
-    renderWithRouter(<ListingCard listing={listingWithoutImage} />);
-    const image = screen.getByRole('img') as HTMLImageElement;
-    expect(image.src).toContain('placeholder');
-  });
-
-  test('renders view count', () => {
-    renderWithRouter(<ListingCard listing={mockListing} />);
-    expect(screen.getByText(/10/)).toBeInTheDocument();
-  });
-
-  test('renders seller name', () => {
-    renderWithRouter(<ListingCard listing={mockListing} />);
-    expect(screen.getByText('Test Seller')).toBeInTheDocument();
-  });
-
-  test('renders location', () => {
-    renderWithRouter(<ListingCard listing={mockListing} />);
-    expect(screen.getByText('Campus')).toBeInTheDocument();
+    test('has proper title attribute for heart button', () => {
+      renderWithProviders(<ListingCard listing={mockListing} />);
+      
+      const heartButton = screen.getByTitle('Додати до збережених');
+      expect(heartButton).toBeInTheDocument();
+    });
   });
 });

@@ -34,32 +34,32 @@ public class RegisterCommandValidator : AbstractValidator<RegisterCommand>
     public RegisterCommandValidator()
     {
         RuleFor(x => x.Email)
-            .NotEmpty().WithMessage("Email is required")
-            .EmailAddress().WithMessage("Invalid email format");
+            .NotEmpty().WithMessage("Email обов'язковий")
+            .EmailAddress().WithMessage("Невірний формат email");
 
         RuleFor(x => x.Password)
-            .NotEmpty().WithMessage("Password is required")
-            .MinimumLength(8).WithMessage("Password must be at least 8 characters")
-            .Matches(@"[A-Z]").WithMessage("Password must contain at least one uppercase letter")
-            .Matches(@"[a-z]").WithMessage("Password must contain at least one lowercase letter")
-            .Matches(@"[0-9]").WithMessage("Password must contain at least one number");
+            .NotEmpty().WithMessage("Пароль обов'язковий")
+            .MinimumLength(8).WithMessage("Пароль має бути щонайменше 8 символів")
+            .Matches(@"[A-Z]").WithMessage("Пароль має містити хоча б одну велику літеру")
+            .Matches(@"[a-z]").WithMessage("Пароль має містити хоча б одну малу літеру")
+            .Matches(@"[0-9]").WithMessage("Пароль має містити хоча б одну цифру");
 
         RuleFor(x => x.FirstName)
-            .NotEmpty().WithMessage("First name is required")
-            .MaximumLength(100).WithMessage("First name must not exceed 100 characters");
+            .NotEmpty().WithMessage("Ім'я обов'язкове")
+            .MaximumLength(100).WithMessage("Ім'я не має перевищувати 100 символів");
 
         RuleFor(x => x.LastName)
-            .NotEmpty().WithMessage("Last name is required")
-            .MaximumLength(100).WithMessage("Last name must not exceed 100 characters");
+            .NotEmpty().WithMessage("Прізвище обов'язкове")
+            .MaximumLength(100).WithMessage("Прізвище не має перевищувати 100 символів");
 
         RuleFor(x => x.StudentId)
-            .NotEmpty().WithMessage("Student ID is required");
+            .NotEmpty().WithMessage("Номер студентського обов'язковий");
 
         RuleFor(x => x.University)
-            .NotEmpty().WithMessage("University is required");
+            .NotEmpty().WithMessage("Університет обов'язковий");
 
         RuleFor(x => x.YearOfStudy)
-            .InclusiveBetween(1, 7).WithMessage("Year of study must be between 1 and 7");
+            .InclusiveBetween(1, 7).WithMessage("Курс має бути від 1 до 7");
     }
 }
 
@@ -83,9 +83,21 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, AuthRespo
     {
         var existingUser = await _context.Users
             .FirstOrDefaultAsync(u => u.Email == request.Email, cancellationToken);
-
         if (existingUser != null)
-            throw new InvalidOperationException("User with this email already exists");
+            throw new InvalidOperationException("Користувач з таким email вже існує");
+
+        var existingStudent = await _context.Users
+            .FirstOrDefaultAsync(u => u.StudentId == request.StudentId, cancellationToken);
+        if (existingStudent != null)
+            throw new InvalidOperationException("Студентський квиток вже зареєстрований");
+
+        if (!string.IsNullOrWhiteSpace(request.PhoneNumber))
+        {
+            var existingPhone = await _context.Users
+                .FirstOrDefaultAsync(u => u.PhoneNumber == request.PhoneNumber, cancellationToken);
+            if (existingPhone != null)
+                throw new InvalidOperationException("Номер телефону вже використовується");
+        }
 
         var user = new User
         {
@@ -98,7 +110,9 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, AuthRespo
             University = request.University,
             Faculty = request.Faculty,
             YearOfStudy = request.YearOfStudy,
-            IsActive = true
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
         };
 
         var (accessToken, refreshToken) = _jwtService.GenerateTokens(user);
@@ -121,8 +135,18 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, AuthRespo
                 FirstName = user.FirstName,
                 LastName = user.LastName,
                 FullName = user.FullName,
+                PhoneNumber = user.PhoneNumber,
+                StudentId = user.StudentId,
                 University = user.University,
-                IsEmailVerified = user.IsEmailVerified
+                Faculty = user.Faculty,
+                YearOfStudy = user.YearOfStudy,
+                ProfileImageUrl = user.ProfileImageUrl,
+                Rating = user.Rating,
+                ReviewsCount = user.ReviewsCount,
+                IsEmailVerified = user.IsEmailVerified,
+                IsPhoneVerified = user.IsPhoneVerified,
+                IsActive = user.IsActive,
+                CreatedAt = user.CreatedAt
             }
         };
     }

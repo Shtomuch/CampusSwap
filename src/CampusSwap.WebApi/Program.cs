@@ -1,11 +1,14 @@
 using CampusSwap.Application;
 using CampusSwap.Application.Common.Interfaces;
 using CampusSwap.Infrastructure;
+using CampusSwap.Infrastructure.Data;
 using CampusSwap.WebApi.Hubs;
 using CampusSwap.WebApi.Middleware;
 using CampusSwap.WebApi.Services;
 using Microsoft.OpenApi.Models;
 using Serilog;
+using Microsoft.Extensions.FileProviders;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -27,20 +30,30 @@ builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 
-// Add Controllers
-builder.Services.AddControllers();
+// Add Controllers with JSON options
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.PropertyNamingPolicy = null; // Keep original property names
+        options.JsonSerializerOptions.WriteIndented = true;
+        options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
+        options.JsonSerializerOptions.NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.AllowReadingFromString;
+    });
 
 // Add SignalR
 builder.Services.AddSignalR();
+
+// Authentication and Authorization are configured in Infrastructure layer
 
 // Configure CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
     {
-        policy.AllowAnyOrigin()
+        policy.WithOrigins("http://localhost:3000", "http://localhost:3001")
               .AllowAnyMethod()
-              .AllowAnyHeader();
+              .AllowAnyHeader()
+              .AllowCredentials();
     });
 });
 
@@ -87,6 +100,22 @@ builder.Services.AddSwaggerGen(c =>
 
 var app = builder.Build();
 
+// Ensure database is created
+using (var scope = app.Services.CreateScope())
+{
+    var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    try
+    {
+        // This will create the database if it doesn't exist
+        await context.Database.EnsureCreatedAsync();
+        Log.Information("Database ensured created successfully");
+    }
+    catch (Exception ex)
+    {
+        Log.Error(ex, "An error occurred while creating the database");
+    }
+}
+
 // Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())
 {
@@ -98,9 +127,29 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-app.UseHttpsRedirection();
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 app.UseSerilogRequestLogging();
 app.UseCors("AllowAll");
+
+// Enable static files
+app.UseStaticFiles();
+
+// Enable static files for uploads
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads")),
+    RequestPath = "/uploads",
+    OnPrepareResponse = ctx =>
+    {
+        // Add CORS headers for static files
+        ctx.Context.Response.Headers.Append("Access-Control-Allow-Origin", "*");
+        ctx.Context.Response.Headers.Append("Access-Control-Allow-Methods", "GET");
+        ctx.Context.Response.Headers.Append("Access-Control-Allow-Headers", "Content-Type");
+    }
+});
 
 app.UseAuthentication();
 app.UseAuthorization();

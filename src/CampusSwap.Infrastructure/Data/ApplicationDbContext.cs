@@ -27,6 +27,7 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<Conversation> Conversations => Set<Conversation>();
     public DbSet<Review> Reviews => Set<Review>();
     public DbSet<SavedListing> SavedListings => Set<SavedListing>();
+    public DbSet<Notification> Notifications => Set<Notification>();
 
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
@@ -200,8 +201,22 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
                 .OnDelete(DeleteBehavior.Restrict);
 
             entity.HasOne(e => e.Order)
+                .WithMany()
+                .HasForeignKey(e => e.OrderId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // Configure Order-Review relationships
+        modelBuilder.Entity<Order>(entity =>
+        {
+            entity.HasOne(e => e.BuyerReview)
                 .WithOne()
-                .HasForeignKey<Review>(e => e.OrderId)
+                .HasForeignKey<Review>("BuyerReviewOrderId")
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.SellerReview)
+                .WithOne()
+                .HasForeignKey<Review>("SellerReviewOrderId")
                 .OnDelete(DeleteBehavior.Restrict);
         });
 
@@ -220,6 +235,39 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
                 .WithMany(l => l.SavedByUsers)
                 .HasForeignKey(e => e.ListingId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Notification configuration
+        modelBuilder.Entity<Notification>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Type).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.Title).HasMaxLength(200).IsRequired();
+            entity.Property(e => e.Message).HasMaxLength(1000).IsRequired();
+            entity.Property(e => e.ActionUrl).HasMaxLength(500);
+            entity.Property(e => e.Data).HasMaxLength(2000);
+
+            entity.HasOne(e => e.User)
+                .WithMany(u => u.Notifications)
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Order)
+                .WithMany()
+                .HasForeignKey(e => e.OrderId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.Conversation)
+                .WithMany()
+                .HasForeignKey(e => e.ConversationId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.Listing)
+                .WithMany()
+                .HasForeignKey(e => e.ListingId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasIndex(e => new { e.UserId, e.IsRead, e.CreatedAt });
         });
     }
 }

@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Chat Simple</title>
+    <script src="https://unpkg.com/@microsoft/signalr@latest/dist/browser/signalr.min.js"></script>
+</head>
+<body>
+    <h1>Test Chat Simple</h1>
+    <div id="status">Connecting...</div>
+    <div id="logs"></div>
+    <button onclick="sendTestMessage()">Send Test Message</button>
+    
+    <script>
+        const status = document.getElementById('status');
+        const logs = document.getElementById('logs');
+        let connection = null;
+        let accessToken = null;
+        
+        function log(message) {
+            logs.innerHTML += '<p>' + new Date().toLocaleTimeString() + ': ' + message + '</p>';
+        }
+        
+        async function login() {
+            try {
+                const loginData = {
+                    email: 'testuser@example.com',
+                    password: 'Test123!'
+                };
+                
+                const response = await fetch('http://localhost:5001/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(loginData)
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    accessToken = result.AccessToken;
+                    log('✅ Login successful');
+                    return true;
+                } else {
+                    log('❌ Login failed: ' + response.status);
+                    return false;
+                }
+            } catch (error) {
+                log('❌ Login error: ' + error.message);
+                return false;
+            }
+        }
+        
+        async function testChat() {
+            try {
+                // Спочатку логінимося
+                const loginSuccess = await login();
+                if (!loginSuccess) {
+                    status.textContent = 'Login failed';
+                    return;
+                }
+                
+                // Створюємо з'єднання з токеном
+                connection = new signalR.HubConnectionBuilder()
+                    .withUrl("http://localhost:5001/hubs/chat", {
+                        accessTokenFactory: () => accessToken
+                    })
+                    .build();
+                
+                connection.onclose((error) => {
+                    log('Connection closed: ' + error);
+                });
+                
+                connection.onreconnecting((error) => {
+                    log('Reconnecting: ' + error);
+                });
+                
+                connection.onreconnected((connectionId) => {
+                    log('Reconnected: ' + connectionId);
+                });
+                
+                // Слухаємо помилки
+                connection.on("Error", (error) => {
+                    log('❌ SignalR Error: ' + error);
+                });
+                
+                // Слухаємо розмови
+                connection.on("ConversationsLoaded", (conversations) => {
+                    log('✅ Conversations loaded: ' + JSON.stringify(conversations));
+                });
+                
+                // Слухаємо повідомлення
+                connection.on("ReceiveMessage", (message) => {
+                    log('✅ Message received: ' + JSON.stringify(message));
+                });
+                
+                // Слухаємо підтвердження відправки
+                connection.on("MessageSent", (message) => {
+                    log('✅ Message sent confirmation: ' + JSON.stringify(message));
+                });
+                
+                // Підключаємося
+                await connection.start();
+                log('✅ Connected to SignalR hub');
+                status.textContent = 'Connected';
+                
+                // Тестуємо виклик методу
+                try {
+                    await connection.invoke("GetConversations");
+                    log('✅ GetConversations called successfully');
+                } catch (error) {
+                    log('❌ GetConversations failed: ' + error.message);
+                }
+                
+            } catch (error) {
+                log('❌ Connection failed: ' + error.message);
+                status.textContent = 'Failed: ' + error.message;
+            }
+        }
+        
+        async function sendTestMessage() {
+            if (!connection) {
+                log('❌ No connection available');
+                return;
+            }
+            
+            try {
+                // Відправляємо тестове повідомлення
+                const recipientId = 'b6ce1662-7309-4d30-b1ba-313eb649fa5c'; // Інший користувач
+                const message = 'Test message from ' + new Date().toLocaleTimeString();
+                
+                log('📤 Sending message to: ' + recipientId);
+                log('📤 Message: ' + message);
+                
+                await connection.invoke("SendMessage", recipientId, message);
+                log('✅ SendMessage called successfully');
+                
+            } catch (error) {
+                log('❌ SendMessage failed: ' + error.message);
+                log('❌ Error details: ' + JSON.stringify(error));
+            }
+        }
+        
+        testChat();
+    </script>
+</body>
+</html>

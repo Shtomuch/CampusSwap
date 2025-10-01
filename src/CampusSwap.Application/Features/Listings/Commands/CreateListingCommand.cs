@@ -28,23 +28,46 @@ public class CreateListingCommandValidator : AbstractValidator<CreateListingComm
     public CreateListingCommandValidator()
     {
         RuleFor(x => x.Title)
-            .NotEmpty().WithMessage("Title is required")
-            .MaximumLength(200).WithMessage("Title must not exceed 200 characters");
+            .NotEmpty().WithMessage("Назва обов'язкова")
+            .MaximumLength(200).WithMessage("Назва не може перевищувати 200 символів");
 
         RuleFor(x => x.Description)
-            .NotEmpty().WithMessage("Description is required")
-            .MaximumLength(2000).WithMessage("Description must not exceed 2000 characters");
+            .NotEmpty().WithMessage("Опис обов'язковий")
+            .MaximumLength(2000).WithMessage("Опис не може перевищувати 2000 символів");
 
         RuleFor(x => x.Price)
-            .GreaterThan(0).WithMessage("Price must be greater than 0");
+            .GreaterThan(0).WithMessage("Ціна має бути більше 0");
 
         RuleFor(x => x.Location)
-            .NotEmpty().WithMessage("Location is required")
-            .MaximumLength(200).WithMessage("Location must not exceed 200 characters");
+            .NotEmpty().WithMessage("Місце зустрічі обов'язкове")
+            .MaximumLength(200).WithMessage("Місце зустрічі не може перевищувати 200 символів");
+
+        RuleFor(x => x.Category)
+            .IsInEnum().WithMessage("Невірна категорія");
+
+        RuleFor(x => x.Condition)
+            .NotEmpty().WithMessage("Стан обов'язковий")
+            .MaximumLength(50).WithMessage("Стан не може перевищувати 50 символів");
 
         RuleFor(x => x.ImageUrls)
-            .Must(x => x.Count > 0).WithMessage("At least one image is required")
-            .Must(x => x.Count <= 10).WithMessage("Maximum 10 images allowed");
+            .Must(x => x != null && x.Count > 0).WithMessage("Необхідно додати хоча б одне зображення")
+            .Must(x => x == null || x.Count <= 10).WithMessage("Максимум 10 зображень");
+
+        RuleFor(x => x.ISBN)
+            .MaximumLength(20).WithMessage("ISBN не може перевищувати 20 символів")
+            .When(x => !string.IsNullOrEmpty(x.ISBN));
+
+        RuleFor(x => x.Author)
+            .MaximumLength(100).WithMessage("Ім'я автора не може перевищувати 100 символів")
+            .When(x => !string.IsNullOrEmpty(x.Author));
+
+        RuleFor(x => x.CourseCode)
+            .MaximumLength(20).WithMessage("Код курсу не може перевищувати 20 символів")
+            .When(x => !string.IsNullOrEmpty(x.CourseCode));
+
+        RuleFor(x => x.PublicationYear)
+            .InclusiveBetween(1900, DateTime.Now.Year).WithMessage($"Рік видання має бути від 1900 до {DateTime.Now.Year}")
+            .When(x => x.PublicationYear.HasValue);
     }
 }
 

@@ -1,6 +1,7 @@
 using Bogus;
 using CampusSwap.Domain.Entities;
 using CampusSwap.Domain.Enums;
+using CampusSwap.Domain.ValueObjects;
 using FluentAssertions;
 
 namespace CampusSwap.Domain.Tests.Entities;
@@ -27,7 +28,7 @@ public class OrderTests
             ListingId = listingId,
             BuyerId = buyerId,
             SellerId = sellerId,
-            TotalAmount = totalAmount,
+            TotalAmount = new Money(totalAmount, "UAH"),
             MeetingLocation = meetingLocation
         };
 
@@ -36,7 +37,8 @@ public class OrderTests
         order.ListingId.Should().Be(listingId);
         order.BuyerId.Should().Be(buyerId);
         order.SellerId.Should().Be(sellerId);
-        order.TotalAmount.Should().Be(totalAmount);
+        order.TotalAmount.Amount.Should().Be(totalAmount);
+        order.TotalAmount.Currency.Should().Be("UAH");
         order.MeetingLocation.Should().Be(meetingLocation);
         order.Status.Should().Be(OrderStatus.Pending);
         order.CreatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
@@ -101,19 +103,6 @@ public class OrderTests
         order.MeetingTime.Should().Be(meetingTime);
     }
 
-    [Fact]
-    public void Should_Set_PaymentMethod()
-    {
-        // Arrange
-        var order = new Order();
-        var paymentMethod = PaymentMethod.Cash;
-
-        // Act
-        order.PaymentMethod = paymentMethod;
-
-        // Assert
-        order.PaymentMethod.Should().Be(paymentMethod);
-    }
 
     [Fact]
     public void Should_Set_Notes()

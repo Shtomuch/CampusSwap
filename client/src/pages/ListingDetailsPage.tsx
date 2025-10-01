@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { HeartIcon, ChatBubbleLeftIcon, MapPinIcon, CalendarIcon, EyeIcon, PhoneIcon } from '@heroicons/react/24/outline';
@@ -8,13 +8,18 @@ import { Listing } from '../types';
 import { format } from 'date-fns';
 import { uk } from 'date-fns/locale';
 import { useAuth } from '../context/AuthContext';
+import { useSavedItems } from '../context/SavedItemsContext';
+import { ConfirmModal } from '../components/Modal';
+import { useToast } from '../components/Toast';
 
 export default function ListingDetailsPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { isAuthenticated, user } = useAuth();
-  const [isSaved, setIsSaved] = React.useState(false);
+  const { isSaved, toggleSaved } = useSavedItems();
+  const { showSuccess, showError } = useToast();
   const [selectedImage, setSelectedImage] = React.useState(0);
+  const [showOrderModal, setShowOrderModal] = useState(false);
 
   const { data: listing, isLoading } = useQuery<Listing>({
     queryKey: ['listing', id],
@@ -32,21 +37,47 @@ export default function ListingDetailsPage() {
     navigate(`/chat?userId=${listing?.userId}`);
   };
 
-  const handleOrder = async () => {
+  const handleOrder = () => {
     if (!isAuthenticated) {
       navigate('/login');
       return;
     }
+    setShowOrderModal(true);
+  };
+
+  const confirmOrder = async () => {
     try {
-      await api.post('/orders', {
+      console.log('🛒 Creating order for listing:', listing?.id);
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      tomorrow.setHours(18, 0, 0, 0); // 18:00 завтра
+      
+      const orderData = {
         listingId: listing?.id,
         meetingLocation: listing?.location || 'Узгоджується',
-        meetingTime: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+        meetingTime: tomorrow.toISOString(),
         notes: `Запит з оголошення ${listing?.title}`,
-      });
-      navigate('/orders');
-    } catch (error) {
-      console.error('Error creating order:', error);
+      };
+      console.log('📝 Order data:', orderData);
+      
+      const response = await api.post('/orders', orderData);
+      console.log('✅ Order created successfully:', response.data);
+      
+      // Показуємо успішне повідомлення
+      showSuccess('Замовлення створено!', 'Замовлення успішно створено! Ви будете перенаправлені на сторінку замовлень.');
+      setShowOrderModal(false);
+      
+      // Перенаправляємо через 2 секунди
+      setTimeout(() => {
+        navigate('/orders');
+      }, 2000);
+    } catch (error: any) {
+      console.error('❌ Error creating order:', error);
+      const errorMessage = error?.response?.data?.message || error?.message || 'Не вдалося створити замовлення';
+      
+      // Показуємо детальну помилку
+      showError('Помилка створення замовлення', errorMessage);
+      setShowOrderModal(false);
     }
   };
 
@@ -72,21 +103,43 @@ export default function ListingDetailsPage() {
         {/* Images */}
         <div>
           <div className="relative">
-            <img
-              src={listing.imageUrls?.[selectedImage] || 'https://via.placeholder.com/600x400?text=No+Image'}
-              alt={listing.title}
-              className="w-full h-96 object-cover rounded-lg"
-            />
-            <button
-              onClick={() => setIsSaved(!isSaved)}
-              className="absolute top-4 right-4 p-3 bg-white rounded-full shadow-md hover:shadow-lg transition-shadow"
-            >
-              {isSaved ? (
-                <HeartSolidIcon className="h-6 w-6 text-red-500" />
+            <div className="w-full h-96 bg-gray-200 rounded-lg flex items-center justify-center">
+              {listing.imageUrls?.[selectedImage] ? (
+                <img
+                  src={listing.imageUrls[selectedImage]}
+                  alt={listing.title}
+                  className="w-full h-full object-cover rounded-lg"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = 'none';
+                    const parent = target.parentElement;
+                    if (parent) {
+                      parent.innerHTML = '<div class="w-full h-full bg-gray-200 flex items-center justify-center text-gray-500"><span>Немає зображення</span></div>';
+                    }
+                  }}
+                />
               ) : (
-                <HeartIcon className="h-6 w-6 text-gray-600" />
+                <div className="text-gray-500 text-center">
+                  <svg className="w-24 h-24 mx-auto mb-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <span>Немає зображення</span>
+                </div>
               )}
-            </button>
+            </div>
+            {isAuthenticated && (
+              <button
+                onClick={() => toggleSaved(listing.id)}
+                className="absolute top-4 right-4 p-3 bg-white rounded-full shadow-md hover:shadow-lg transition-shadow"
+                title={isSaved(listing.id) ? 'Видалити з збережених' : 'Додати до збережених'}
+              >
+                {isSaved(listing.id) ? (
+                  <HeartSolidIcon className="h-6 w-6 text-red-500" />
+                ) : (
+                  <HeartIcon className="h-6 w-6 text-gray-600" />
+                )}
+              </button>
+            )}
           </div>
           {listing.imageUrls && listing.imageUrls.length > 1 && (
             <div className="mt-4 grid grid-cols-4 gap-2">
@@ -137,7 +190,7 @@ export default function ListingDetailsPage() {
           <div className="mt-6 p-4 bg-gray-50 rounded-lg">
             <p className="font-semibold text-gray-900">Продавець</p>
             <p className="text-lg">{listing.sellerName}</p>
-            {user?.id !== listing.userId && (
+            {user?.id !== listing.userId ? (
               <div className="mt-4 space-y-2">
                 <button
                   onClick={handleContact}
@@ -153,7 +206,23 @@ export default function ListingDetailsPage() {
                   Замовити
                 </button>
               </div>
-            )}
+            ) : !isAuthenticated ? (
+              <div className="mt-4 space-y-2">
+                <button
+                  onClick={handleContact}
+                  className="w-full flex items-center justify-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+                >
+                  <ChatBubbleLeftIcon className="h-5 w-5 mr-2" />
+                  Написати продавцю
+                </button>
+                <button
+                  onClick={handleOrder}
+                  className="w-full flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                >
+                  Замовити
+                </button>
+              </div>
+            ) : null}
           </div>
 
           {/* Additional Info */}
@@ -190,6 +259,25 @@ export default function ListingDetailsPage() {
         <h2 className="text-2xl font-bold text-gray-900 mb-6">Схожі оголошення</h2>
         {/* Add similar listings component here */}
       </div>
+
+      {/* Order Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showOrderModal}
+        onClose={() => setShowOrderModal(false)}
+        onConfirm={confirmOrder}
+        title="Підтвердити замовлення"
+        message={`Ви впевнені, що хочете замовити "${listing?.title}"? Замовлення буде створено з наступними деталями:
+
+• Місце зустрічі: ${listing?.location || 'Узгоджується'}
+• Час зустрічі: Завтра о 18:00
+• Ціна: ${listing?.price} ${listing?.currency}
+
+Після підтвердження ви будете перенаправлені на сторінку замовлень.`}
+        confirmText="Підтвердити замовлення"
+        cancelText="Скасувати"
+        variant="info"
+      />
+
     </div>
   );
 }

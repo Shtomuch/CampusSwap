@@ -13,7 +13,8 @@ public class UserTests
     {
         // Arrange
         var id = Guid.NewGuid();
-        var name = _faker.Person.FullName;
+        var firstName = _faker.Person.FirstName;
+        var lastName = _faker.Person.LastName;
         var email = _faker.Internet.Email();
         var university = _faker.Company.CompanyName();
 
@@ -21,18 +22,22 @@ public class UserTests
         var user = new User
         {
             Id = id,
-            Name = name,
+            FirstName = firstName,
+            LastName = lastName,
             Email = email,
             University = university
         };
 
         // Assert
         user.Id.Should().Be(id);
-        user.Name.Should().Be(name);
+        user.FirstName.Should().Be(firstName);
+        user.LastName.Should().Be(lastName);
+        user.FullName.Should().Be($"{firstName} {lastName}");
         user.Email.Should().Be(email);
         user.University.Should().Be(university);
         user.Listings.Should().BeEmpty();
-        user.Orders.Should().BeEmpty();
+        user.BuyerOrders.Should().BeEmpty();
+        user.SellerOrders.Should().BeEmpty();
         user.SavedListings.Should().BeEmpty();
     }
 
@@ -44,25 +49,26 @@ public class UserTests
 
         // Assert
         user.Listings.Should().NotBeNull();
-        user.Orders.Should().NotBeNull();
+        user.BuyerOrders.Should().NotBeNull();
+        user.SellerOrders.Should().NotBeNull();
         user.SavedListings.Should().NotBeNull();
         user.SentMessages.Should().NotBeNull();
         user.ReceivedMessages.Should().NotBeNull();
-        user.UserConversations.Should().NotBeNull();
-        user.RefreshTokens.Should().NotBeNull();
+        user.ReviewsGiven.Should().NotBeNull();
+        user.ReviewsReceived.Should().NotBeNull();
     }
 
     [Fact]
-    public void Should_Set_IsEmailConfirmed_Property()
+    public void Should_Set_IsEmailVerified_Property()
     {
         // Arrange
         var user = new User();
 
         // Act
-        user.IsEmailConfirmed = true;
+        user.IsEmailVerified = true;
 
         // Assert
-        user.IsEmailConfirmed.Should().BeTrue();
+        user.IsEmailVerified.Should().BeTrue();
     }
 
     [Fact]
@@ -80,16 +86,16 @@ public class UserTests
     }
 
     [Fact]
-    public void Should_Set_ProfilePictureUrl_Property()
+    public void Should_Set_ProfileImageUrl_Property()
     {
         // Arrange
         var user = new User();
-        var profilePictureUrl = _faker.Internet.Avatar();
+        var profileImageUrl = _faker.Internet.Avatar();
 
         // Act
-        user.ProfilePictureUrl = profilePictureUrl;
+        user.ProfileImageUrl = profileImageUrl;
 
         // Assert
-        user.ProfilePictureUrl.Should().Be(profilePictureUrl);
+        user.ProfileImageUrl.Should().Be(profileImageUrl);
     }
 }

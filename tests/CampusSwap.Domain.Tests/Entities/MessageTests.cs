@@ -19,7 +19,7 @@ public class MessageTests
         var content = _faker.Lorem.Paragraph();
 
         // Act
-        var message = new Message
+        var message = new ChatMessage
         {
             Id = id,
             ConversationId = conversationId,
@@ -35,14 +35,14 @@ public class MessageTests
         message.ReceiverId.Should().Be(receiverId);
         message.Content.Should().Be(content);
         message.IsRead.Should().BeFalse();
-        message.SentAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
+        message.CreatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
     }
 
     [Fact]
     public void Should_Mark_Message_As_Read()
     {
         // Arrange
-        var message = new Message();
+        var message = new ChatMessage();
 
         // Act
         message.IsRead = true;
@@ -55,71 +55,32 @@ public class MessageTests
     }
 
     [Fact]
-    public void Should_Set_Edited_Properties()
-    {
-        // Arrange
-        var message = new Message();
-        var newContent = _faker.Lorem.Paragraph();
-
-        // Act
-        message.Content = newContent;
-        message.IsEdited = true;
-        message.EditedAt = DateTime.UtcNow;
-
-        // Assert
-        message.Content.Should().Be(newContent);
-        message.IsEdited.Should().BeTrue();
-        message.EditedAt.Should().NotBeNull();
-        message.EditedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
-    }
-
-    [Fact]
     public void Should_Have_Default_IsRead_As_False()
     {
         // Act
-        var message = new Message();
+        var message = new ChatMessage();
 
         // Assert
         message.IsRead.Should().BeFalse();
     }
 
     [Fact]
-    public void Should_Have_Default_IsEdited_As_False()
+    public void Should_Have_CreatedAt_Set_On_Creation()
     {
         // Act
-        var message = new Message();
+        var message = new ChatMessage();
 
         // Assert
-        message.IsEdited.Should().BeFalse();
-    }
-
-    [Fact]
-    public void Should_Have_SentAt_Set_On_Creation()
-    {
-        // Act
-        var message = new Message();
-
-        // Assert
-        message.SentAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
+        message.CreatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
     }
 
     [Fact]
     public void Should_Have_Null_ReadAt_By_Default()
     {
         // Act
-        var message = new Message();
+        var message = new ChatMessage();
 
         // Assert
         message.ReadAt.Should().BeNull();
-    }
-
-    [Fact]
-    public void Should_Have_Null_EditedAt_By_Default()
-    {
-        // Act
-        var message = new Message();
-
-        // Assert
-        message.EditedAt.Should().BeNull();
     }
 }

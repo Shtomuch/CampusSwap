@@ -13,7 +13,8 @@ public class MappingProfile : Profile
     {
         CreateMap<Listing, ListingDto>()
             .ForMember(d => d.SellerName, opt => opt.MapFrom(s => s.User.FullName))
-            .ForMember(d => d.ImageUrls, opt => opt.MapFrom(s => s.Images.Select(i => i.ImageUrl)));
+            .ForMember(d => d.ImageUrls, opt => opt.MapFrom(s => s.Images.Select(i => i.ImageUrl)))
+            .ForMember(d => d.Price, opt => opt.MapFrom(s => s.Price.Amount));
         
         CreateMap<User, UserDto>();
         CreateMap<Order, OrderDto>();

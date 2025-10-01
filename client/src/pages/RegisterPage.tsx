@@ -50,7 +50,8 @@ export default function RegisterPage() {
       });
       navigate('/');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Помилка реєстрації. Спробуйте ще раз.');
+      const msg = err.userMessage || err.response?.data?.message;
+      setError(msg || 'Помилка реєстрації. Спробуйте ще раз.');
     }
   };
 
@@ -71,7 +72,7 @@ export default function RegisterPage() {
             </Link>
           </p>
         </div>
-        <form className="mt-8 space-y-4" onSubmit={handleSubmit(onSubmit)}>
+        <form className="mt-8 space-y-4" onSubmit={handleSubmit(onSubmit)} role="form">
           {error && (
             <div className="rounded-md bg-red-50 p-4">
               <div className="flex">
@@ -90,6 +91,7 @@ export default function RegisterPage() {
               </label>
               <input
                 {...register('firstName', { required: 'Ім\'я обов\'язкове' })}
+                id="firstName"
                 type="text"
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
               />
@@ -104,6 +106,7 @@ export default function RegisterPage() {
               </label>
               <input
                 {...register('lastName', { required: 'Прізвище обов\'язкове' })}
+                id="lastName"
                 type="text"
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
               />
@@ -125,6 +128,7 @@ export default function RegisterPage() {
                   message: 'Невірний формат email',
                 },
               })}
+              id="email"
               type="email"
               autoComplete="email"
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
@@ -140,6 +144,7 @@ export default function RegisterPage() {
             </label>
             <input
               {...register('phoneNumber', { required: 'Номер телефону обов\'язковий' })}
+              id="phoneNumber"
               type="tel"
               placeholder="+380501234567"
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
@@ -162,6 +167,7 @@ export default function RegisterPage() {
                     message: 'Мінімум 8 символів',
                   },
                 })}
+                id="password"
                 type="password"
                 autoComplete="new-password"
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
@@ -180,6 +186,7 @@ export default function RegisterPage() {
                   required: 'Підтвердіть пароль',
                   validate: value => value === password || 'Паролі не співпадають',
                 })}
+                id="confirmPassword"
                 type="password"
                 autoComplete="new-password"
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
@@ -196,6 +203,7 @@ export default function RegisterPage() {
             </label>
             <input
               {...register('studentId', { required: 'Номер студентського обов\'язковий' })}
+              id="studentId"
               type="text"
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
             />
@@ -210,6 +218,7 @@ export default function RegisterPage() {
             </label>
             <select
               {...register('university', { required: 'Виберіть університет' })}
+              id="university"
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
             >
               <option value="">Виберіть університет</option>
@@ -231,6 +240,7 @@ export default function RegisterPage() {
               </label>
               <input
                 {...register('faculty', { required: 'Факультет обов\'язковий' })}
+                id="faculty"
                 type="text"
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
               />
@@ -245,6 +255,7 @@ export default function RegisterPage() {
               </label>
               <select
                 {...register('yearOfStudy', { required: 'Виберіть курс' })}
+                id="yearOfStudy"
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
               >
                 <option value="">Виберіть курс</option>

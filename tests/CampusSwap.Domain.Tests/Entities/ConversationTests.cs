@@ -13,23 +13,23 @@ public class ConversationTests
     {
         // Arrange
         var id = Guid.NewGuid();
-        var listingId = Guid.NewGuid();
-        var title = _faker.Lorem.Sentence();
+        var user1Id = Guid.NewGuid();
+        var user2Id = Guid.NewGuid();
 
         // Act
         var conversation = new Conversation
         {
             Id = id,
-            ListingId = listingId,
-            Title = title
+            User1Id = user1Id,
+            User2Id = user2Id
         };
 
         // Assert
         conversation.Id.Should().Be(id);
-        conversation.ListingId.Should().Be(listingId);
-        conversation.Title.Should().Be(title);
+        conversation.User1Id.Should().Be(user1Id);
+        conversation.User2Id.Should().Be(user2Id);
         conversation.Messages.Should().NotBeNull().And.BeEmpty();
-        conversation.UserConversations.Should().NotBeNull().And.BeEmpty();
+        conversation.IsActive.Should().BeTrue();
     }
 
     [Fact]
@@ -40,7 +40,6 @@ public class ConversationTests
 
         // Assert
         conversation.Messages.Should().NotBeNull();
-        conversation.UserConversations.Should().NotBeNull();
     }
 
     [Fact]
@@ -68,16 +67,15 @@ public class ConversationTests
     }
 
     [Fact]
-    public void Should_Set_Title()
+    public void Should_Set_IsActive()
     {
         // Arrange
         var conversation = new Conversation();
-        var title = _faker.Lorem.Sentence();
 
         // Act
-        conversation.Title = title;
+        conversation.IsActive = false;
 
         // Assert
-        conversation.Title.Should().Be(title);
+        conversation.IsActive.Should().BeFalse();
     }
 }

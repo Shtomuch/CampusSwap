@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
+using CampusSwap.Application.Features.Notifications.Queries;
 
 namespace CampusSwap.WebApi.Hubs;
 
@@ -45,7 +46,7 @@ public class NotificationHub : Hub
         await base.OnDisconnectedAsync(exception);
     }
 
-    public static async Task SendNotificationToUser(IHubContext<NotificationHub> hubContext, string userId, object notification)
+    public static async Task SendNotificationToUser(IHubContext<NotificationHub> hubContext, string userId, NotificationDto notification)
     {
         if (_userConnections.ContainsKey(userId))
         {
@@ -56,40 +57,57 @@ public class NotificationHub : Hub
         }
     }
 
+    public static async Task SendUnreadCountsUpdate(IHubContext<NotificationHub> hubContext, string userId, UnreadCountsDto counts)
+    {
+        if (_userConnections.ContainsKey(userId))
+        {
+            foreach (var connectionId in _userConnections[userId])
+            {
+                await hubContext.Clients.Client(connectionId).SendAsync("UpdateUnreadCounts", counts);
+            }
+        }
+    }
+
     public static async Task SendListingNotification(IHubContext<NotificationHub> hubContext, string userId, string title, string message, Guid listingId)
     {
-        var notification = new
+        var notification = new NotificationDto
         {
+            Id = Guid.NewGuid(),
             Type = "listing",
             Title = title,
             Message = message,
-            ListingId = listingId,
-            Timestamp = DateTime.UtcNow
+            IsRead = false,
+            CreatedAt = DateTime.UtcNow,
+            ListingId = listingId
         };
         await SendNotificationToUser(hubContext, userId, notification);
     }
 
     public static async Task SendOrderNotification(IHubContext<NotificationHub> hubContext, string userId, string title, string message, Guid orderId)
     {
-        var notification = new
+        var notification = new NotificationDto
         {
+            Id = Guid.NewGuid(),
             Type = "order",
             Title = title,
             Message = message,
-            OrderId = orderId,
-            Timestamp = DateTime.UtcNow
+            IsRead = false,
+            CreatedAt = DateTime.UtcNow,
+            OrderId = orderId
         };
         await SendNotificationToUser(hubContext, userId, notification);
     }
 
     public static async Task SendMessageNotification(IHubContext<NotificationHub> hubContext, string userId, string senderName, string messagePreview)
     {
-        var notification = new
+        var notification = new NotificationDto
         {
+            Id = Guid.NewGuid(),
             Type = "message",
             Title = "New message",
             Message = $"{senderName}: {messagePreview}",
-            Timestamp = DateTime.UtcNow
+            IsRead = false,
+            CreatedAt = DateTime.UtcNow
         };
         await SendNotificationToUser(hubContext, userId, notification);
     }

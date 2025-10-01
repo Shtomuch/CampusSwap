@@ -3,6 +3,8 @@ import { Outlet, Link, useNavigate } from 'react-router-dom';
 import { Disclosure, Menu, Transition } from '@headlessui/react';
 import { Bars3Icon, BellIcon, XMarkIcon, ChatBubbleLeftIcon, ShoppingBagIcon } from '@heroicons/react/24/outline';
 import { useAuth } from '../context/AuthContext';
+import { useNotifications } from '../context/NotificationContext';
+import NotificationDropdown from './NotificationDropdown';
 
 const navigation = [
   { name: 'Головна', href: '/' },
@@ -21,6 +23,7 @@ function classNames(...classes: string[]) {
 
 export default function Layout() {
   const { user, isAuthenticated, logout } = useAuth();
+  const { unreadChatCount } = useNotifications();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -67,14 +70,15 @@ export default function Layout() {
                         className="p-2 text-gray-400 hover:text-gray-500 relative"
                       >
                         <ChatBubbleLeftIcon className="h-6 w-6" />
-                        <span className="absolute top-0 right-0 block h-2 w-2 rounded-full bg-red-400 ring-2 ring-white" />
+                        {unreadChatCount > 0 && (
+                          <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs font-medium text-white">
+                            {unreadChatCount > 9 ? '9+' : unreadChatCount}
+                          </span>
+                        )}
                       </Link>
-                      <button
-                        type="button"
-                        className="ml-3 p-2 text-gray-400 hover:text-gray-500"
-                      >
-                        <BellIcon className="h-6 w-6" />
-                      </button>
+                      <div className="ml-3">
+                        <NotificationDropdown />
+                      </div>
 
                       <Menu as="div" className="relative ml-3">
                         <Menu.Button className="flex rounded-full bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2">

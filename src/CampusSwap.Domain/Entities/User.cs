@@ -35,6 +35,7 @@ public class User : BaseEntity, IAuditableEntity
     public virtual ICollection<ChatMessage> SentMessages { get; set; } = new List<ChatMessage>();
     public virtual ICollection<ChatMessage> ReceivedMessages { get; set; } = new List<ChatMessage>();
     public virtual ICollection<SavedListing> SavedListings { get; set; } = new List<SavedListing>();
+    public virtual ICollection<Notification> Notifications { get; set; } = new List<Notification>();
 
     public string FullName => $"{FirstName} {LastName}";
 }

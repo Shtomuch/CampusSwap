@@ -39,6 +39,7 @@ public static class DependencyInjection
         services.AddScoped<IJwtService, JwtService>();
         services.AddScoped<IEmailService, EmailService>();
         services.AddScoped<IFileStorageService, FileStorageService>();
+        services.AddScoped<INotificationService, NotificationService>();
 
         // Authentication
         var jwtSecret = configuration["JwtSettings:Secret"] ?? "ThisIsASuperSecretKeyForDevelopmentOnly123456789";
@@ -69,14 +70,34 @@ public static class DependencyInjection
             {
                 OnMessageReceived = context =>
                 {
-                    var accessToken = context.Request.Query["access_token"];
                     var path = context.HttpContext.Request.Path;
-                    
-                    if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
+
+                    // Only process query string tokens for SignalR hubs
+                    if (path.StartsWithSegments("/hubs"))
                     {
-                        context.Token = accessToken;
+                        var accessToken = context.Request.Query["access_token"];
+                        if (!string.IsNullOrEmpty(accessToken))
+                        {
+                            Console.WriteLine($"[JWT] 🔗 SignalR auth: Path={path}, Token length={accessToken.ToString().Length}");
+                            context.Token = accessToken;
+                        }
+                        else
+                        {
+                            Console.WriteLine($"[JWT] ❌ SignalR auth: No token provided for {path}");
+                        }
                     }
-                    
+                    // For regular API endpoints, let the default token resolution handle Authorization header
+                    else
+                    {
+                        Console.WriteLine($"[JWT] 🌐 API request: Path={path}, using Authorization header");
+                    }
+
+                    return Task.CompletedTask;
+                },
+                OnAuthenticationFailed = context =>
+                {
+                    var path = context.HttpContext.Request.Path;
+                    Console.WriteLine($"[JWT] 🚫 Authentication failed: Path={path}, Error={context.Exception?.Message}");
                     return Task.CompletedTask;
                 }
             };

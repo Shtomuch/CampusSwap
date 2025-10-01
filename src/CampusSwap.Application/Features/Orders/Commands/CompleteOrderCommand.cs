@@ -1,5 +1,6 @@
 using CampusSwap.Application.Common.Interfaces;
 using CampusSwap.Domain.Enums;
+using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -10,17 +11,29 @@ public class CompleteOrderCommand : IRequest<bool>
     public Guid OrderId { get; set; }
 }
 
+public class CompleteOrderCommandValidator : AbstractValidator<CompleteOrderCommand>
+{
+    public CompleteOrderCommandValidator()
+    {
+        RuleFor(x => x.OrderId)
+            .NotEmpty().WithMessage("Order ID is required");
+    }
+}
+
 public class CompleteOrderCommandHandler : IRequestHandler<CompleteOrderCommand, bool>
 {
     private readonly IApplicationDbContext _context;
     private readonly ICurrentUserService _currentUserService;
+    private readonly INotificationService _notificationService;
 
     public CompleteOrderCommandHandler(
         IApplicationDbContext context,
-        ICurrentUserService currentUserService)
+        ICurrentUserService currentUserService,
+        INotificationService notificationService)
     {
         _context = context;
         _currentUserService = currentUserService;
+        _notificationService = notificationService;
     }
 
     public async Task<bool> Handle(CompleteOrderCommand request, CancellationToken cancellationToken)
@@ -66,6 +79,21 @@ public class CompleteOrderCommandHandler : IRequestHandler<CompleteOrderCommand,
         }
 
         await _context.SaveChangesAsync(cancellationToken);
+
+        // Create notification for the other party
+        var otherUserId = order.BuyerId == currentUserId ? order.Listing.UserId : order.BuyerId;
+        var otherUserName = order.BuyerId == currentUserId ? order.Listing.User.FullName : order.Buyer.FullName;
+        
+        await _notificationService.CreateNotificationAsync(
+            otherUserId,
+            "order",
+            "Замовлення завершено",
+            $"Замовлення \"{order.Listing.Title}\" завершено користувачем {otherUserName}",
+            $"/orders/{order.Id}",
+            null,
+            order.Id,
+            null,
+            order.ListingId);
 
         return true;
     }
